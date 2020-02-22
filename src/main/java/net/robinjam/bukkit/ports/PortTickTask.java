@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import net.milkbowl.vault.economy.Economy;
 import net.robinjam.bukkit.ports.persistence.Port;
@@ -12,6 +13,7 @@ import net.robinjam.bukkit.util.EconomyUtils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,6 +22,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.inventory.ItemStack;
 
+/**
+ * @author robinjam
+ * @author Sognus
+ */
 public class PortTickTask implements Runnable, Listener {
 	
 	private Map<Player, Port> playerLocations = new HashMap<Player, Port>();
@@ -36,7 +42,7 @@ public class PortTickTask implements Runnable, Listener {
 		// Iterate over every player on the server
 		for (Player player : Bukkit.getServer().getOnlinePlayers()) {
 			// Check if the player was standing in a port's activation zone on the last port tick
-			if (playerLocations.keySet().contains(player)) {
+			if (playerLocations.containsKey(player)) {
 				// Check if the player is still standing in the port's activation zone
 				Port port = playerLocations.get(player);
 				if (port.contains(player.getLocation())) {
@@ -100,6 +106,13 @@ public class PortTickTask implements Runnable, Listener {
 				}
 			}
 		}
+
+		// Update all ports
+		for (Port port : Port.getAll()) {
+			if(System.currentTimeMillis() > port.getLastPortTime() + port.getDepartureSchedule()) {
+				port.refreshLastPortTime();
+			}
+		}
 		
 		// Increment the tick counter
 		if (tickNumber == notifyTickPeriod)
@@ -129,21 +142,68 @@ public class PortTickTask implements Runnable, Listener {
 	}
 	
 	private String formatNextDeparture(Port port) {
-		long t = port.getDepartureSchedule() - Bukkit.getWorld(port.getWorld()).getFullTime() % port.getDepartureSchedule();
-		return formatTime(t);
+		// TODO: replace with realtime
+		long nextPortMilis = port.getLastPortTime() + port.getDepartureSchedule();
+		long difference = nextPortMilis - System.currentTimeMillis();
+		return formatTime(difference);
 	}
 	
-	private String formatTime(long time) {
-		long d = time / 24000;
-		long h = (time % 24000) / 1000;
-		long m = ((time % 24000) % 1000) / 16;
-		return String.format("[%dd %dh %dm]", d, h, m);
+	private String formatTime(long millis) {
+		long days = TimeUnit.MILLISECONDS.toDays(millis);
+		millis -= TimeUnit.DAYS.toMillis(days);
+		long hours = TimeUnit.MILLISECONDS.toHours(millis);
+		millis -= TimeUnit.HOURS.toMillis(hours);
+		long minutes = TimeUnit.MILLISECONDS.toMinutes(millis);
+		millis -= TimeUnit.MINUTES.toMillis(minutes);
+		long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+		millis -= TimeUnit.SECONDS.toMillis(seconds);
+
+		// Start a new String
+		StringBuilder sb = new StringBuilder();
+		sb.append("[ ");
+
+		// Days
+		if(days > 0){
+			sb.append(String.format("%dd"));
+			// Spacer
+			sb.append(" ");
+		}
+
+
+		// Hours
+		if(days > 0 || hours > 0){
+			sb.append(String.format("%dh", hours));
+			// Spacer
+			sb.append(" ");
+		}
+
+
+		// Minutes - always shown
+		sb.append(String.format("%dm", minutes));
+
+		// Spacer
+		sb.append(" ");
+
+		// Seconds - always shown
+		sb.append(String.format("%ds", seconds));
+
+		// Spacer
+		sb.append(" ");
+
+		// Miliseconds - always shown
+		sb.append(String.format("%dms", millis));
+
+		// End of formatting
+		sb.append(" ]");
+
+		// Return built string
+		return sb.toString();
+
 	}
 	
 	private boolean portShouldDepart(Port port) {
-		long time = Bukkit.getWorld(port.getWorld()).getFullTime();
-		long prevTime = time - Ports.getInstance().getConfig().getLong("port-tick-period");
-		return time / port.getDepartureSchedule() != prevTime / port.getDepartureSchedule();
+		// True if enough time ellapsed since last port - refresh in PortTickTask because of multiple players teleport
+		return System.currentTimeMillis() > port.getLastPortTime() + port.getDepartureSchedule();
 	}
 	
 	private boolean playerCanUsePort(Player player, Port port) {
@@ -171,9 +231,9 @@ public class PortTickTask implements Runnable, Listener {
 		// Ensure the player is carrying the correct ticket (if required)
 		Integer ticketItemId = port.getTicketItemId();
 		Integer ticketDataValue = port.getTicketDataValue();
-		ItemStack heldItem = player.getItemInHand();
+		ItemStack heldItem = player.getInventory().getItemInMainHand();
 		byte heldData = heldItem.getData().getData();
-		if (ticketItemId != null && heldItem.getTypeId() != ticketItemId || (ticketDataValue != null && heldData != ticketDataValue)) {
+		if (ticketItemId != null && heldItem.getType().getId() != ticketItemId || (ticketDataValue != null && heldData != ticketDataValue)) {
 			player.sendMessage(plugin.translate("port-tick-task.no-ticket", port.getDescription()));
 			return false;
 		}
@@ -181,7 +241,7 @@ public class PortTickTask implements Runnable, Listener {
 		// Ensure the player has enough money to use the port (if required)
 		Economy economy;
 		if (port.getPrice() != null && (economy = EconomyUtils.getEconomy()) != null) {
-			if (economy.withdrawPlayer(player.getName(), port.getPrice()).transactionSuccess()) {
+			if (economy.withdrawPlayer(player, port.getPrice()).transactionSuccess()) {
 				player.sendMessage(plugin.translate("port-tick-task.payment-taken", economy.format(port.getPrice())));
 			} else {
 				player.sendMessage(plugin.translate("port-tick-task.not-enough-money", port.getDescription(), economy.format(port.getPrice())));
@@ -191,11 +251,11 @@ public class PortTickTask implements Runnable, Listener {
 
 		// Remove the ticket from the player's hand
 		if (ticketItemId != null) {
-			int heldItemAmount = player.getItemInHand().getAmount();
+			int heldItemAmount = player.getInventory().getItemInMainHand().getAmount();
 			if (heldItemAmount == 1)
-				player.setItemInHand(null);
+				player.getInventory().setItemInMainHand(null);
 			else
-				player.getItemInHand().setAmount(heldItemAmount - 1);
+				player.getInventory().getItemInMainHand().setAmount(heldItemAmount - 1);
 			player.sendMessage(plugin.translate("port-tick-task.ticket-taken"));
 		}
 		
@@ -211,7 +271,8 @@ public class PortTickTask implements Runnable, Listener {
 		// Refresh the chunk to prevent chunk errors
 		World world = player.getWorld();
 		Chunk chunk = world.getChunkAt(player.getLocation());
-		world.refreshChunk(chunk.getX(), chunk.getZ());
+		chunk.unload();
+		chunk.load();
 		player.sendMessage(Ports.getInstance().translate("port-tick-task.depart"));
 	}
 

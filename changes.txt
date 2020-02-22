@@ -1,0 +1,14 @@
+Version 0.5.0:
+    Plugin switched to Spigot API (minimal minecraft version: 1.15.2)
+    Updated WorldEdit repository
+    Updated WorldEdit API to minimal version 7.0.0
+    Updated Vault repository
+    Updated Vault API to minimal version 1.7
+    Updated Maven Compiler Plugin to 3.8.1
+    Added Maven Jar plugin (version 3.2.0)
+    Set target Java version to 1.8
+    Removed Metrics support
+    Replaced deprecated Spigot API methods with non-deprecated variants
+    Fixed an issue when you were unable to load ports if saved ports values were saved as integers.
+    Switched port scheduling to system time (due to bug caused by doDaylightCycle=false)
+    Updated schedule command to be more user friendly

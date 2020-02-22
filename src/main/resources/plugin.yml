@@ -1,7 +1,8 @@
 name: Ports
 main: net.robinjam.bukkit.ports.Ports
 version: ${project.version}
-author: robinjam
+api-version: "1.15"
+authors: [robinjam, Sognus]
 depend: [WorldEdit]
 softdepend: [Vault]
 

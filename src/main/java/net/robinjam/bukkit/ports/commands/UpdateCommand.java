@@ -18,6 +18,7 @@ import org.bukkit.entity.Player;
  * Handles the /port update command.
  * 
  * @author robinjam
+ * @author Sognus
  */
 @Command(name = "update", usage = "[name]", permissions = "ports.update", playerOnly = true, min = 1, max = 1)
 public class UpdateCommand implements CommandExecutor {
@@ -34,7 +35,7 @@ public class UpdateCommand implements CommandExecutor {
 					+ "').");
 		} else {
 			WorldEdit worldEdit = WorldEdit.getInstance();
-			LocalSession session = worldEdit.getSession(player.getName());
+			LocalSession session = worldEdit.getSessionManager().findByName(player.getName());
 			if (session == null) {
 				sender.sendMessage(ChatColor.RED
 						+ "Please select the activation area using WorldEdit first.");

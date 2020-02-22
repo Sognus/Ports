@@ -16,8 +16,9 @@ import org.bukkit.entity.Player;
 
 /**
  * Handles the /port create command.
- * 
+ *
  * @author robinjam
+ * @author Sognus
  */
 @Command(name = "create", usage = "[name]", permissions = "ports.create", playerOnly = true, min = 1, max = 1)
 public class CreateCommand implements CommandExecutor {
@@ -32,8 +33,7 @@ public class CreateCommand implements CommandExecutor {
 		}
 
 		Player player = (Player) sender;
-		LocalSession session = WorldEdit.getInstance().getSession(
-				player.getName());
+		LocalSession session = WorldEdit.getInstance().getSessionManager().findByName(player.getName());
 		if (session == null) {
 			sender.sendMessage(ChatColor.RED
 					+ "Please select the activation area using WorldEdit first.");

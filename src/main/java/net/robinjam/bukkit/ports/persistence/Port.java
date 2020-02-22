@@ -18,12 +18,13 @@ import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
-import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 
 /**
- * 
+ *
  * @author robinjam
+ * @author Sognus
  */
 public class Port implements ConfigurationSerializable {
 	
@@ -96,6 +97,9 @@ public class Port implements ConfigurationSerializable {
 	private String worldName;
 	private Integer cooldown;
 	private Double price;
+
+	// Time when last player batch was ported
+	private long lastPortTime = 0;
 	
 	public Port()
 	{
@@ -103,7 +107,13 @@ public class Port implements ConfigurationSerializable {
 	}
 	
 	public boolean contains(Location location) {
-		Vector vec = new Vector(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+		BlockVector3 vec = BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+		World world = location.getWorld();
+
+		if(world == null) {
+			return false;
+		}
+
 		return location.getWorld().getName().equals(getWorld()) && activationRegion.contains(vec);
 	}
 	
@@ -258,6 +268,36 @@ public class Port implements ConfigurationSerializable {
 	
 	public void setPrice(Double price) {
 		this.price = price;
+	}
+
+	/**
+	 * Gets stored last port time
+	 * @author Sognus
+	 *
+	 * @return
+	 */
+	public long getLastPortTime() {
+		return this.lastPortTime;
+	}
+
+	/**
+	 * Sets last port time to given value
+	 * @author Sognus
+	 *
+	 * @param l value to set last port time to
+	 */
+	public void setLastPortTime(long l) {
+		this.lastPortTime = l;
+	}
+
+	/**
+	 * Sets last port time to current time (in ms)
+	 *
+	 * @author Sognus
+	 *
+	 */
+	public void refreshLastPortTime() {
+		this.lastPortTime = System.currentTimeMillis();
 	}
 
 }

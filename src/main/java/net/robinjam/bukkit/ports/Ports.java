@@ -12,17 +12,20 @@ import net.robinjam.bukkit.util.CommandManager;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.mcstats.Metrics;
 
 /**
  * The main plugin class, and translation provider for all other classes.
- * 
+ *
  * @author robinjam
+ * @author Sognus
  */
 public class Ports extends JavaPlugin {
 
 	// The singleton instance
 	private static Ports instance;
+
+	// Global time for all ports
+	private long portScheduleStart;
 
 	/**
 	 * @return The singleton instance.
@@ -85,13 +88,8 @@ public class Ports extends JavaPlugin {
 		getConfig().options().copyDefaults(true);
 		saveConfig();
 
-		// Enable plugin metrics
-		try {
-			Metrics metrics = new Metrics(this);
-			metrics.start();
-		} catch (IOException e) {
-			getLogger().warning("Unable to start plugin metrics.");
-		}
+		// Start port global timer
+		this.portScheduleStart = System.currentTimeMillis();
 
 		// Schedule ticket manager
 		getServer().getScheduler().scheduleSyncRepeatingTask(this, portTickTask, 0L, getConfig().getLong("port-tick-period"));
