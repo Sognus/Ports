@@ -109,7 +109,9 @@ public class PortTickTask implements Runnable, Listener {
 
 		// Update all ports
 		for (Port port : Port.getAll()) {
-			if(System.currentTimeMillis() > port.getLastPortTime() + port.getDepartureSchedule()) {
+			Integer departureSchedule = port.getDepartureSchedule() == null ? 0 : port.getDepartureSchedule();
+
+			if(System.currentTimeMillis() > port.getLastPortTime() + departureSchedule) {
 				port.refreshLastPortTime();
 			}
 		}

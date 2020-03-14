@@ -1,3 +1,7 @@
+Version 0.5.1:
+	Fixed a NullPointerException spam that might be caused while updating departure schedule
+	Changed command usage to be more readable
+
 Version 0.5.0:
     Plugin switched to Spigot API (minimal minecraft version: 1.15.2)
     Updated WorldEdit repository

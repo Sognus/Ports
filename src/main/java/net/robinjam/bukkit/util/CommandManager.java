@@ -33,7 +33,7 @@ public class CommandManager implements org.bukkit.command.CommandExecutor {
 			sender.sendMessage(ChatColor.RED + "Invalid command!");
 		}
 
-		sender.sendMessage(ChatColor.YELLOW + String.format("Usage: /%s [%s]", label, StringUtils.join(commands.keySet(), "|")));
+		sender.sendMessage(ChatColor.YELLOW + String.format("Usage: /%s [%s]", label, StringUtils.join(commands.keySet(), " | ")));
 
 		return true;
 	}
